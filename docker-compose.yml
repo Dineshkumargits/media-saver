@@ -7,6 +7,9 @@ services:
       - ./backend/.env
     volumes:
       - ig_sessions:/app/sessions
+    networks:
+      - default
+      - cloudflare-net
     restart: unless-stopped
 
   frontend:
@@ -14,10 +17,18 @@ services:
     ports:
       - "2000:3000"
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:9000
+      - NEXT_PUBLIC_API_BASE_URL=https://media-saver-api.adkdev.in
     depends_on:
       - backend
+    networks:
+      - default
+      - cloudflare-net
     restart: unless-stopped
 
 volumes:
   ig_sessions:
+
+networks:
+  default:
+  cloudflare-net:
+    external: true
