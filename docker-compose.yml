@@ -29,9 +29,11 @@ services:
       # YouTube cookies exported from a real logged-in browser session, to
       # get past "Sign in to confirm you're not a bot" — YouTube flags
       # requests from datacenter/VPS IPs much more aggressively than
-      # residential ones. Read-only: this container never needs to write it.
+      # residential ones. Must be read-write: yt-dlp rewrites the cookie jar
+      # after every run to persist refreshed session tokens; mounting this
+      # read-only makes YoutubeDL.close() raise OSError on every request.
       # See deploy/README.md for how to generate cookies.txt.
-      - ./backend/cookies/youtube.txt:/app/cookies/youtube.txt:ro
+      - ./backend/cookies/youtube.txt:/app/cookies/youtube.txt
     deploy:
       resources:
         limits:

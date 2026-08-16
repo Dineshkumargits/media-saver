@@ -48,11 +48,15 @@ The fix is to give yt-dlp cookies from a real, logged-in browser session.
    `youtube.com` in Netscape format — or run
    `yt-dlp --cookies-from-browser chrome --cookies cookies.txt --skip-download https://youtube.com`
    locally if you have yt-dlp installed.
-2. Copy the file to the server as `backend/cookies/youtube.txt`:
+2. Copy the file to the server as `backend/cookies/youtube.txt`, then make it
+   writable by the container's non-root `appuser` — yt-dlp rewrites the
+   cookie jar after every run to persist refreshed session tokens, and the
+   backend container doesn't run as root:
    ```bash
    scp cookies.txt user@server:/srv/media-saver/backend/cookies/youtube.txt
+   ssh user@server chmod 666 /srv/media-saver/backend/cookies/youtube.txt
    ```
-3. `docker-compose.yml` mounts that path read-only into the backend
+3. `docker-compose.yml` mounts that path read-write into the backend
    container at `/app/cookies/youtube.txt`, and `YTDLP_COOKIES_FILE` in
    `.env.example` already points there. Restart the backend to pick it up:
    ```bash
