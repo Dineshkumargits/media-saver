@@ -1,0 +1,42 @@
+# Media Saver vhosts.
+#
+# This file is owned by this repo but read by the shared Caddy in infra/.
+# Copy it into place and reload after changing it:
+#
+#   cp deploy/media-saver.caddy /srv/infra/caddy/sites/
+#   docker exec shared-caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# Copy, not symlink — Caddy's sites directory is bind-mounted into the
+# container, and a symlink pointing outside that mount cannot be resolved.
+# Reload is zero-downtime; restart is not.
+#
+# The http:// prefix is deliberate. Public TLS is terminated by Cloudflare and
+# traffic arrives via the tunnel over the Docker network, so Caddy serves plain
+# HTTP internally. Without the prefix Caddy would enable automatic HTTPS and try
+# to obtain certificates it neither needs nor can validate — this host has no
+# usable public port 443 (shared IP, provider-reserved).
+#
+# ---------------------------------------------------------------------------
+# DOMAIN: adkdev.in only.
+#
+# Caddy only sees a hostname if the tunnel routes it here, so each hostname
+# below also needs a matching Public Hostname in the Cloudflare Zero Trust
+# dashboard (on the tunnel for the adkdev.in account) pointing at
+# http://shared-caddy:80. A vhost with no tunnel route is dead config; a
+# tunnel route with no vhost gets the Caddy default (404).
+# ---------------------------------------------------------------------------
+
+http://media-saver-api.adkdev.in {
+	import secure_headers
+
+	# /download streams large media files chunk-by-chunk; disable buffering
+	# so Caddy forwards bytes as they arrive instead of holding them.
+	reverse_proxy media-saver-api:8000 {
+		flush_interval -1
+	}
+}
+
+http://media-saver.adkdev.in {
+	import secure_headers
+	reverse_proxy media-saver-web:3000
+}

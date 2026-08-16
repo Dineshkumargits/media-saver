@@ -114,6 +114,13 @@ cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
+This compose file targets the production deployment (see `deploy/README.md`):
+it expects an external `shared-net` Docker network and does not publish host
+ports — a reverse proxy is expected to reach `media-saver-api`/`media-saver-web`
+by container name on that network. For plain local Docker testing without that
+setup, run `docker network create shared-net` first, or add `ports:` back to
+the services temporarily.
+
 ## Notes on production hardening
 
 - Swap `ExtractionCache`'s in-memory dict for Redis if you run multiple

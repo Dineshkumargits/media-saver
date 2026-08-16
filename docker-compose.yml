@@ -1,34 +1,63 @@
+# Media Saver application stack.
+#
+#   docker compose up -d --build
+#
+# Requires the shared infrastructure (separate `infra` repo at /srv/infra) to
+# be running first:
+#   docker network create shared-net
+#   cd /srv/infra && docker compose up -d
+#
+# Caddy and the Cloudflare tunnel live there, not here, so this stack can be
+# rebuilt and restarted without disturbing other applications on the box.
+# There is no exposed host port — Caddy reaches these containers over
+# shared-net by container name; see deploy/media-saver.caddy.
+
 services:
   backend:
     build: ./backend
-    ports:
-      - "7000:8000"
+    image: media-saver-backend:latest
+    container_name: media-saver-api
+    restart: unless-stopped
+    # This VPS is an LXC container that cannot load the docker-default
+    # AppArmor profile, so every container refuses to start without this.
+    security_opt:
+      - apparmor=unconfined
     env_file:
       - ./backend/.env
     volumes:
       - ig_sessions:/app/sessions
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     networks:
-      - default
-      - cloudflare-net
-    restart: unless-stopped
+      - shared-net
 
   frontend:
-    build: ./frontend
-    ports:
-      - "2000:3000"
-    environment:
-      - NEXT_PUBLIC_API_BASE_URL=https://media-saver-api.adkdev.in
+    build:
+      context: ./frontend
+      args:
+        # Inlined into the Next.js bundle at build time. Changing it means
+        # rebuilding this image, not just restarting the container.
+        NEXT_PUBLIC_API_BASE_URL: https://media-saver-api.adkdev.in
+    image: media-saver-frontend:latest
+    container_name: media-saver-web
+    restart: unless-stopped
+    security_opt:
+      - apparmor=unconfined
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     networks:
-      - default
-      - cloudflare-net
-    restart: unless-stopped
+      - shared-net
 
 volumes:
   ig_sessions:
 
 networks:
-  default:
-  cloudflare-net:
+  shared-net:
+    name: shared-net
     external: true
