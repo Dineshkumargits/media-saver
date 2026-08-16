@@ -58,6 +58,13 @@ def _base_ydl_opts() -> dict[str, Any]:
         "writethumbnail": False,
         "cachedir": False,
         "logger": logging.getLogger("yt_dlp"),
+        # Datacenter/VPS IPs get hit with YouTube's "sign in to confirm
+        # you're not a bot" wall on the default `web` client far more often
+        # than on the mobile-app clients, which use a different auth flow
+        # and don't require it. Try those first.
+        "extractor_args": {
+            "youtube": {"player_client": ["android_vr", "android", "web"]}
+        },
     }
     if settings.YTDLP_COOKIES_FILE:
         opts["cookiefile"] = settings.YTDLP_COOKIES_FILE
