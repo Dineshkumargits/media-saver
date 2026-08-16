@@ -21,15 +21,49 @@ Assumes `infra` is already running and the `shared-net` network exists.
 cd /srv/media-saver/backend
 cp .env.example .env && $EDITOR .env
 
-# 2. Reverse proxy vhosts
+# 2. YouTube cookies — see "YouTube cookies" section below. Required before
+# extraction will work from this VPS's IP.
+mkdir -p /srv/media-saver/backend/cookies
+# upload cookies.txt here as youtube.txt (scp from your machine, see below)
+
+# 3. Reverse proxy vhosts
 cp deploy/media-saver.caddy /srv/infra/caddy/sites/
 docker exec shared-caddy caddy reload --config /etc/caddy/Caddyfile
 
-# 3. Build and start
+# 4. Build and start
 cd /srv/media-saver
 docker compose up -d --build
 docker compose logs -f backend
 ```
+
+## YouTube cookies
+
+YouTube blocks extraction requests from datacenter/VPS IPs with `Sign in to
+confirm you're not a bot` far more aggressively than from residential IPs.
+The fix is to give yt-dlp cookies from a real, logged-in browser session.
+
+1. On your own machine (not the server), install the [Get cookies.txt
+   LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+   browser extension, log into youtube.com, and export cookies for
+   `youtube.com` in Netscape format — or run
+   `yt-dlp --cookies-from-browser chrome --cookies cookies.txt --skip-download https://youtube.com`
+   locally if you have yt-dlp installed.
+2. Copy the file to the server as `backend/cookies/youtube.txt`:
+   ```bash
+   scp cookies.txt user@server:/srv/media-saver/backend/cookies/youtube.txt
+   ```
+3. `docker-compose.yml` mounts that path read-only into the backend
+   container at `/app/cookies/youtube.txt`, and `YTDLP_COOKIES_FILE` in
+   `.env.example` already points there. Restart the backend to pick it up:
+   ```bash
+   docker compose up -d backend
+   ```
+
+Cookies expire and YouTube periodically invalidates sessions it decides look
+automated — if extraction starts failing with the same "not a bot" error
+again after previously working, re-export and re-upload a fresh
+`youtube.txt`. Never commit this file (it's git-ignored under
+`backend/cookies/`) — it's equivalent to your YouTube login session.
 
 ## Environment variables
 
@@ -74,7 +108,7 @@ Only this stack restarts — MySQL, Redis and Caddy keep running, so other
 applications on the box are unaffected.
 
 If `deploy/media-saver.caddy` changed, copy it over and reload Caddy again
-(step 2 under First deploy).
+(step 3 under First deploy).
 
 If only `NEXT_PUBLIC_API_BASE_URL` or another frontend build arg changed,
 `docker compose up -d --build` still picks it up since it's passed at build

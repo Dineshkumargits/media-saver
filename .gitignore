@@ -18,6 +18,9 @@ venv/
 # Instagram session cache
 backend/sessions/
 
+# YouTube cookies (real browser session — must never be committed)
+backend/cookies/
+
 # Node / Next.js
 node_modules/
 frontend/.next/

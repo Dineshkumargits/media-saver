@@ -26,6 +26,12 @@ services:
       - ./backend/.env
     volumes:
       - ig_sessions:/app/sessions
+      # YouTube cookies exported from a real logged-in browser session, to
+      # get past "Sign in to confirm you're not a bot" — YouTube flags
+      # requests from datacenter/VPS IPs much more aggressively than
+      # residential ones. Read-only: this container never needs to write it.
+      # See deploy/README.md for how to generate cookies.txt.
+      - ./backend/cookies/youtube.txt:/app/cookies/youtube.txt:ro
     deploy:
       resources:
         limits:
